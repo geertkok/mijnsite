@@ -1,0 +1,3 @@
+www_logs/
+*.log
+.DS_Store
