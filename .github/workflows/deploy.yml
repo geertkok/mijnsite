@@ -10,6 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check env
+        env:
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          set -e
+          [ -n "$HOST" ] || (echo "HETZNER_HOST secret missing/empty" && exit 1)
+          [ -n "$USER" ] || (echo "HETZNER_USER secret missing/empty" && exit 1)
+          echo "HOST and USER are set"
+
       - name: Install lftp
         run: sudo apt-get update && sudo apt-get install -y lftp openssh-client
 
