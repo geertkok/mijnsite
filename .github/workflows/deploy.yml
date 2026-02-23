@@ -38,24 +38,22 @@ jobs:
           export SSH_ASKPASS=/tmp/askpass.sh
           export DISPLAY=:9999
 
-          # add key to agent without TTY
           setsid -w ssh-add ~/.ssh/hetzner_deploy </dev/null
 
-          # known_hosts (optioneel, maar netjes)
           ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
 
           ssh-add -l
 
-      - name: Deploy public_html via SFTP mirror
-        run: |
-          set -euo pipefail
-          lftp -e "
-            set cmd:fail-exit true;
-            set net:timeout 20;
-            set net:max-retries 2;
-            set sftp:auto-confirm yes;
-            set sftp:connect-program 'ssh -a -x -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
-            open -u ${{ secrets.HETZNER_USER }} sftp://${{ secrets.HETZNER_HOST }};
-            mirror -R --delete --verbose public_html public_html;
-            bye
-          "
+- name: Deploy public_html via SFTP mirror
+  run: |
+    set -euo pipefail
+    lftp -e "
+      set cmd:fail-exit true;
+      set net:timeout 20;
+      set net:max-retries 2;
+      set sftp:auto-confirm yes;
+      set sftp:connect-program 'ssh -a -x -o BatchMode=yes -o IdentityAgent=$SSH_AUTH_SOCK -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
+      open -u ${{ secrets.HETZNER_USER }} sftp://${{ secrets.HETZNER_HOST }};
+      mirror -R --delete --verbose public_html public_html;
+      bye
+    "
