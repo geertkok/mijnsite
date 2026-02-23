@@ -11,22 +11,39 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install lftp
-        run: sudo apt-get update && sudo apt-get install -y lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp openssh-client
 
       - name: Write SSH key
         run: |
+          set -e
           mkdir -p ~/.ssh
-          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_key
+          printf '%s' "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_key
           chmod 600 ~/.ssh/hetzner_key
 
-      - name: Deploy public_html via SFTP mirror
+      - name: Preflight (show what we will deploy)
+        run: |
+          set -e
+          ls -la
+          ls -la public_html || true
+          ls -la public_html/css || true
+          ls -la public_html/js || true
+
+      - name: Deploy public_html via SFTP mirror (debug)
         env:
           HOST: ${{ secrets.HETZNER_HOST }}
           USER: ${{ secrets.HETZNER_USER }}
         run: |
+          set -euxo pipefail
           lftp -e "
-            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_key -o StrictHostKeyChecking=no';
+            set cmd:fail-exit true;
+            set cmd:trace true;
+            set net:timeout 20;
+            set net:max-retries 2;
+            set sftp:auto-confirm yes;
+            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
             open -u $USER sftp://$HOST;
-            mirror -R --delete --verbose public_html public_html;
+            pwd;
+            ls;
+            mirror -R --verbose --delete public_html public_html;
             bye
           "
