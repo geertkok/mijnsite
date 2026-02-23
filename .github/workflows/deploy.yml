@@ -12,18 +12,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write SSH key (base64) + known_hosts
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lftp openssh-client
+
+      - name: Write SSH key + unlock into ssh-agent
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           echo "${{ secrets.HETZNER_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/hetzner_deploy
           chmod 600 ~/.ssh/hetzner_deploy
+
+          # start agent
+          eval "$(ssh-agent -s)"
+
+          # SSH_ASKPASS helper (non-interactive)
+          cat > /tmp/askpass.sh <<'EOF'
+          #!/usr/bin/env sh
+          echo "${HETZNER_SSH_PASSPHRASE}"
+          EOF
+          chmod +x /tmp/askpass.sh
+
+          export HETZNER_SSH_PASSPHRASE="${{ secrets.HETZNER_SSH_PASSPHRASE }}"
+          export SSH_ASKPASS=/tmp/askpass.sh
+          export DISPLAY=:9999
+
+          # add key to agent without TTY
+          setsid -w ssh-add ~/.ssh/hetzner_deploy </dev/null
+
+          # known_hosts (optioneel, maar netjes)
           ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Install lftp
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lftp
+          ssh-add -l
 
       - name: Deploy public_html via SFTP mirror
         run: |
@@ -33,7 +54,7 @@ jobs:
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
-            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
+            set sftp:connect-program 'ssh -a -x -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
             open -u ${{ secrets.HETZNER_USER }} sftp://${{ secrets.HETZNER_HOST }};
             mirror -R --delete --verbose public_html public_html;
             bye
