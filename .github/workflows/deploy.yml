@@ -27,7 +27,7 @@ jobs:
         run: |
           set -e
           mkdir -p ~/.ssh
-          printf '%s' "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_key
+          echo "${{ secrets.HETZNER_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/hetzner_key
           chmod 600 ~/.ssh/hetzner_key
 
       - name: Preflight (show what we will deploy)
