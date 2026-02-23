@@ -1,0 +1,32 @@
+name: Deploy to Hetzner (SFTP)
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install -y lftp
+
+      - name: Write SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HETZNER_SSH_KEY }}" > ~/.ssh/hetzner_key
+          chmod 600 ~/.ssh/hetzner_key
+
+      - name: Deploy public_html via SFTP mirror
+        env:
+          HOST: ${{ secrets.HETZNER_HOST }}
+          USER: ${{ secrets.HETZNER_USER }}
+        run: |
+          lftp -e "
+            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_key -o StrictHostKeyChecking=no';
+            open -u $USER sftp://$HOST;
+            mirror -R --delete --verbose public_html public_html;
+            bye
+          "
