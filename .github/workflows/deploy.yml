@@ -1,4 +1,4 @@
-name: Deploy to Hetzner (SFTP) LOCKED v4.5
+name: Deploy to Hetzner (SFTP) LOCKED v4.6
 
 on:
   push:
@@ -42,31 +42,29 @@ jobs:
         run: |
           set -euo pipefail
 
-          mk_script () {
-            local path="$1"
-            : > "$path"
-            printf '%s\n' \
-              'set cmd:fail-exit true' \
-              'set cmd:trace true' \
-              'set net:timeout 20' \
-              'set net:max-retries 2' \
-              'set sftp:auto-confirm yes' \
-              'set sftp:connect-program ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes' \
-              "open sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
-              'ls' \
-              'mirror -R --delete --verbose public_html/ /public_html/' \
-              'bye' \
-              >> "$path"
-          }
+          SCRIPT=/tmp/lftp_deploy.cmd
+          : > "$SCRIPT"
+
+          # IMPORTANT: -l %u forces the lftp username; %h is the host.
+          printf '%s\n' \
+            'set cmd:fail-exit true' \
+            'set cmd:trace true' \
+            'set net:timeout 20' \
+            'set net:max-retries 2' \
+            'set sftp:auto-confirm yes' \
+            'set sftp:connect-program ssh -a -x -l %u -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no %h' \
+            "open sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" \
+            'ls' \
+            'mirror -R --delete --verbose public_html/ /public_html/' \
+            'bye' \
+            >> "$SCRIPT"
 
           echo "=== NORMAL DEPLOY ==="
-          SCRIPT=/tmp/lftp_deploy.cmd
-          mk_script "$SCRIPT"
           if lftp -f "$SCRIPT"; then
             echo "Deploy succeeded."
             exit 0
           fi
 
           echo "=== DEPLOY FAILED — RUNNING DEBUG ==="
-          lftp -d -f "$SCRIPT" | grep -E 'Running connect|Permission denied|Host key|Login|Fatal|error|Connected' || true
+          lftp -d -f "$SCRIPT" | grep -E 'Running connect|Permission denied|Host key|Login|Fatal|error|Connected|open:' || true
           exit 1
