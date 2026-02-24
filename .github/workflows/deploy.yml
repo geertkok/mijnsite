@@ -3,11 +3,15 @@ name: Deploy to Hetzner (SFTP)
 on:
   push:
     branches: [ main ]
+    paths:
+      - "public_html/**"
+      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -16,7 +20,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lftp openssh-client
 
-      - name: Write SSH key (base64 nopass)
+      - name: Write SSH key (base64 nopass) + known_hosts
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -25,11 +30,13 @@ jobs:
           ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
 
       - name: SFTP preflight (must work)
+        shell: bash
         run: |
           set -euo pipefail
           sftp -oBatchMode=yes -i ~/.ssh/hetzner_deploy "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/" <<< $'ls\nbye\n'
 
       - name: Deploy public_html via SFTP mirror
+        shell: bash
         run: |
           set -euo pipefail
           lftp -e "
@@ -37,8 +44,8 @@ jobs:
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
-            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_deploy -l ${{ secrets.HETZNER_USER }} -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
-            open sftp://${{ secrets.HETZNER_HOST }};
+            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
+            open -u ${{ secrets.HETZNER_USER }} sftp://${{ secrets.HETZNER_HOST }};
             mirror -R --delete --verbose public_html public_html;
             bye
           "
