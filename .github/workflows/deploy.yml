@@ -40,4 +40,5 @@ jobs:
 
           mirror -R --delete --verbose public_html/ /public_html/
           bye
-EOF
+
+
