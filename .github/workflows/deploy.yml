@@ -1,4 +1,4 @@
-name: Deploy to Hetzner (SFTP) v4.3
+name: Deploy to Hetzner (SFTP) LOCKED
 
 on:
   push:
@@ -13,14 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Show version + commit
-        run: |
-          echo "DEPLOY VERSION: v4.3"
-          echo "Commit: $GITHUB_SHA"
-          echo "Ref: $GITHUB_REF"
+      - uses: actions/checkout@v4
 
       - name: Install tools
         run: |
@@ -36,7 +29,7 @@ jobs:
           ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Preflight SFTP (must work)
+      - name: Preflight SFTP
         run: |
           set -euo pipefail
           printf "cd /\nls\nbye\n" | sftp \
@@ -45,24 +38,36 @@ jobs:
             -i ~/.ssh/hetzner_deploy \
             "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"
 
-      - name: Deploy public_html via lftp mirror
+      - name: Deploy with auto-debug fallback
         run: |
           set -euo pipefail
 
-          SCRIPT=/tmp/lftp_deploy.cmd
-          : > "$SCRIPT"
+          run_lftp () {
+            lftp "$@" -e "
+              set cmd:fail-exit true;
+              set net:timeout 20;
+              set net:max-retries 2;
+              set sftp:auto-confirm yes;
+              set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes\";
+              mirror -R --delete --verbose public_html/ /public_html/;
+              bye
+            "
+          }
 
-          printf '%s\n' \
-            'set cmd:fail-exit true' \
-            'set cmd:trace true' \
-            'set net:timeout 20' \
-            'set net:max-retries 2' \
-            'set sftp:auto-confirm yes' \
-            'set sftp:connect-program "ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes"' \
-            'open sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}' \
-            'ls' \
-            'mirror -R --delete --verbose public_html/ /public_html/' \
-            'bye' \
-            >> "$SCRIPT"
+          echo "=== NORMAL DEPLOY ==="
+          if run_lftp "sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"; then
+            echo "Deploy succeeded."
+            exit 0
+          fi
 
-          lftp -d -f "$SCRIPT"
+          echo "=== DEPLOY FAILED — RUNNING DEBUG ==="
+          lftp -d "sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}" -e "
+            set cmd:fail-exit true;
+            set sftp:auto-confirm yes;
+            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes\";
+            ls;
+            bye
+          " | grep -E 'Connecting|Permission|Login|Denied|Host key|Running connect|Fatal|error' || true
+
+          echo "=== HARD FAIL ==="
+          exit 1
