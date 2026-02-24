@@ -20,36 +20,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y lftp openssh-client
 
-      - name: Write SSH key (base64 nopass) + known_hosts
-        shell: bash
+      - name: Write SSH key
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           echo "${{ secrets.HETZNER_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/hetzner_deploy
           chmod 600 ~/.ssh/hetzner_deploy
-          ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.HETZNER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: SFTP preflight (must work)
-        shell: bash
+      - name: Deploy via SFTP
         run: |
           set -euo pipefail
-          sftp -oBatchMode=yes -oIdentitiesOnly=yes -i ~/.ssh/hetzner_deploy "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/" <<< $'ls\nbye\n'
+          lftp sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} <<EOF
+          set cmd:fail-exit true
+          set net:timeout 20
+          set net:max-retries 2
+          set sftp:auto-confirm yes
+          set sftp:connect-program "ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes"
 
-      - name: Deploy public_html via SFTP mirror (lftp)
-        shell: bash
-        run: |
-          set -euo pipefail
-          lftp -e "
-            set cmd:fail-exit true;
-            set cmd:trace true;
-            set net:timeout 20;
-            set net:max-retries 2;
-            set sftp:auto-confirm yes;
-
-            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts\";
-
-            open -u \"${{ secrets.HETZNER_USER }}\" sftp://${{ secrets.HETZNER_HOST }};
-            ls;
-            mirror -R --delete --verbose public_html/ /public_html/;
-            bye
-          "
+          mirror -R --delete --verbose public_html/ /public_html/
+          bye
+EOF
