@@ -5,5 +5,9 @@
   "editor.formatOnSave": true,
   "files.trimTrailingWhitespace": true,
   "files.insertFinalNewline": true,
-  "prettier.requireConfig": true
+  "prettier.requireConfig": true,
+  "git.autofetch": true,
+  "git.autofetchPeriod": 300,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true
 }
