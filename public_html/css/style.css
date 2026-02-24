@@ -10,6 +10,14 @@
   --max: 1080px;
 }
 
+/* Alt theme (CSP-safe: used by data-alt toggle) */
+:root[data-alt="1"]{
+  --bg: #070a0e;
+  --panel: rgba(255,255,255,.08);
+  --panel2: rgba(255,255,255,.12);
+  --line: rgba(255,255,255,.20);
+}
+
 *{box-sizing:border-box}
 
 body{

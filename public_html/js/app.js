@@ -1,4 +1,9 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Restore theme
+  const saved = localStorage.getItem("zurafa_alt");
+  if (saved === "1") document.documentElement.dataset.alt = "1";
+
+  // Button
   const btn = document.getElementById("toggle-contrast");
   if (btn) {
     btn.addEventListener("click", (e) => {
@@ -6,13 +11,22 @@ document.addEventListener("DOMContentLoaded", () => {
       window.toggleTheme?.();
     });
   }
-});
 
-// Date pill
-const d = new Date();
-const fmt = new Intl.DateTimeFormat("nl-NL", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
-document.getElementById("today").textContent = fmt.format(d);
-document.getElementById("year").textContent = String(d.getFullYear());
+  // Date pill
+  const d = new Date();
+  const fmt = new Intl.DateTimeFormat("nl-NL", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const today = document.getElementById("today");
+  if (today) today.textContent = fmt.format(d);
+
+  const year = document.getElementById("year");
+  if (year) year.textContent = String(d.getFullYear());
+});
 
 // Keyboard shortcut: G -> scroll to links
 window.addEventListener("keydown", (e) => {
@@ -21,19 +35,11 @@ window.addEventListener("keydown", (e) => {
   }
 });
 
-// Contrast toggle
+// Contrast toggle (CSP-safe: only flips data-alt; CSS defines variables)
 window.toggleTheme = function toggleTheme() {
   const root = document.documentElement;
   const isAlt = root.dataset.alt === "1";
-  root.dataset.alt = isAlt ? "0" : "1";
-
-  if (!isAlt) {
-    document.documentElement.style.setProperty("--bg", "#070a0e");
-    document.documentElement.style.setProperty("--panel", "rgba(255,255,255,.08)");
-    document.documentElement.style.setProperty("--line", "rgba(255,255,255,.20)");
-  } else {
-    document.documentElement.style.setProperty("--bg", "#0b0f17");
-    document.documentElement.style.setProperty("--panel", "rgba(255,255,255,.06)");
-    document.documentElement.style.setProperty("--line", "rgba(255,255,255,.14)");
-  }
+  const next = isAlt ? "0" : "1";
+  root.dataset.alt = next;
+  localStorage.setItem("zurafa_alt", next);
 };
