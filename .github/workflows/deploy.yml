@@ -33,9 +33,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sftp -oBatchMode=yes -i ~/.ssh/hetzner_deploy "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/" <<< $'ls\nbye\n'
+          sftp -oBatchMode=yes -oIdentitiesOnly=yes -i ~/.ssh/hetzner_deploy "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}:/" <<< $'ls\nbye\n'
 
-      - name: Deploy public_html via SFTP mirror
+      - name: Deploy public_html via SFTP mirror (lftp)
         shell: bash
         run: |
           set -euo pipefail
@@ -44,7 +44,10 @@ jobs:
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
-            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\";
+
+            # lftp injecteert %u (user) en %h (host) in deze ssh-call
+            set sftp:connect-program \"ssh -a -x -l %u %h -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\";
+
             open -u \"${{ secrets.HETZNER_USER }}\" sftp://${{ secrets.HETZNER_HOST }};
             ls;
             mirror -R --delete --verbose public_html public_html;
