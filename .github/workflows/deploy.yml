@@ -41,15 +41,15 @@ jobs:
           set -euo pipefail
           lftp -e "
             set cmd:fail-exit true;
+            set cmd:trace true;
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
 
-            # lftp injecteert %u (user) en %h (host) in deze ssh-call
-            set sftp:connect-program \"ssh -a -x -l %u %h -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\";
+            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=~/.ssh/known_hosts\";
 
             open -u \"${{ secrets.HETZNER_USER }}\" sftp://${{ secrets.HETZNER_HOST }};
             ls;
-            mirror -R --delete --verbose public_html public_html;
+            mirror -R --delete --verbose public_html/ /public_html/;
             bye
           "
