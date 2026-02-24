@@ -1,4 +1,4 @@
-name: Deploy to Hetzner (SFTP) LOCKED v4.7
+name: Deploy to Hetzner (SFTP) LOCKED v4.8
 
 on:
   push:
@@ -38,36 +38,37 @@ jobs:
             -i ~/.ssh/hetzner_deploy \
             "${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"
 
-      - name: Deploy with lftp (locked + debug on fail)
+      - name: Deploy with lftp (try sftp-server paths)
         run: |
           set -euo pipefail
 
           USER="${{ secrets.HETZNER_USER }}"
           HOST="${{ secrets.HETZNER_HOST }}"
 
-          SCRIPT=/tmp/lftp_deploy.cmd
-          : > "$SCRIPT"
+          run_with_server () {
+            local SFTP_SERVER="$1"
+            SCRIPT=/tmp/lftp_deploy.cmd
+            : > "$SCRIPT"
+            printf '%s\n' \
+              'set cmd:fail-exit true' \
+              'set cmd:trace true' \
+              'set net:timeout 20' \
+              'set net:max-retries 2' \
+              'set sftp:auto-confirm yes' \
+              "set sftp:connect-program ssh -a -x -l $USER -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no $HOST $SFTP_SERVER" \
+              "open sftp://$USER@$HOST" \
+              'ls' \
+              'mirror -R --delete --verbose public_html/ /public_html/' \
+              'bye' \
+              >> "$SCRIPT"
 
-          # No %u/%h placeholders; we pin user+host explicitly.
-          printf '%s\n' \
-            'set cmd:fail-exit true' \
-            'set cmd:trace true' \
-            'set net:timeout 20' \
-            'set net:max-retries 2' \
-            'set sftp:auto-confirm yes' \
-            "set sftp:connect-program ssh -a -x -l $USER -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no $HOST" \
-            "open sftp://$USER@$HOST" \
-            'ls' \
-            'mirror -R --delete --verbose public_html/ /public_html/' \
-            'bye' \
-            >> "$SCRIPT"
+            echo "=== Trying sftp-server: $SFTP_SERVER ==="
+            lftp -d -f "$SCRIPT"
+          }
 
-          echo "=== NORMAL DEPLOY ==="
-          if lftp -f "$SCRIPT"; then
-            echo "Deploy succeeded."
-            exit 0
-          fi
+          # Try common sftp-server locations
+          if run_with_server /usr/lib/ssh/sftp-server; then exit 0; fi
+          if run_with_server /usr/libexec/sftp-server; then exit 0; fi
 
-          echo "=== DEPLOY FAILED — RUNNING DEBUG ==="
-          lftp -d -f "$SCRIPT" | grep -E 'Running connect|Permission denied|Host key|Login|Fatal|error|Connected|open:|resolve' || true
+          echo "All sftp-server attempts failed."
           exit 1
