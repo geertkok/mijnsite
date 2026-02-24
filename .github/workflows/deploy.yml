@@ -1,4 +1,4 @@
-name: Deploy to Hetzner (SFTP) v4.0
+name: Deploy to Hetzner (SFTP) v4.1
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
 
       - name: Show version + commit
         run: |
-          echo "DEPLOY VERSION: v4.0"
+          echo "DEPLOY VERSION: v4.1"
           echo "Commit: $GITHUB_SHA"
           echo "Ref: $GITHUB_REF"
 
@@ -48,14 +48,14 @@ jobs:
       - name: Deploy public_html via lftp mirror
         run: |
           set -euo pipefail
-          lftp -e "
+
+          lftp -d -e '
             set cmd:fail-exit true;
             set cmd:trace true;
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
-            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes\";
-
+            set sftp:connect-program "ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes";
             mirror -R --delete --verbose public_html/ /public_html/;
             bye
-          " sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}
+          ' "sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"
