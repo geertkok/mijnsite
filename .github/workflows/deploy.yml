@@ -44,8 +44,9 @@ jobs:
             set net:timeout 20;
             set net:max-retries 2;
             set sftp:auto-confirm yes;
-            set sftp:connect-program 'ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null';
-            open -u ${{ secrets.HETZNER_USER }} sftp://${{ secrets.HETZNER_HOST }};
+            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null\";
+            open -u \"${{ secrets.HETZNER_USER }}\" sftp://${{ secrets.HETZNER_HOST }};
+            ls;
             mirror -R --delete --verbose public_html public_html;
             bye
           "
