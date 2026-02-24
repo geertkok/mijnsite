@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="nl">
+<html lang="nl" data-alt="0">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Zurafa.org — startpagina" />
   <title>zurafa.org</title>
   <link rel="stylesheet" href="/css/style.css">
-  <script src="/js/app.js?v=2" defer></script>
+  <script src="/js/app.js?v=3" defer></script>
 </head>
 <body>
   <div class="wrap">
     <div class="top">
-      <a class="brand" href="/" aria-label="zurafa.org">
+      <a class="brand" href="/">
         <div class="logo">Z</div>
         <div>
           <h1>zurafa.org</h1>
@@ -19,7 +19,7 @@
         </div>
       </a>
 
-      <div class="pill" title="Lokale tijd">
+      <div class="pill">
         <span>Vandaag</span>
         <b id="today">—</b>
       </div>
@@ -28,73 +28,26 @@
     <main class="hero">
       <div class="hero-grid">
         <section>
-          <h2>Welkom bij <span style="opacity:.92">zurafa.org</span>.</h2>
+          <h2>Welkom bij <span class="soft">zurafa.org</span>.</h2>
           <p class="sub">
-            Een strakke startpagina voor snelle toegang tot jouw projecten, documentatie en tools.
-            Pas de links hieronder aan naar jouw eigen services.
+            Een strakke startpagina voor snelle toegang tot jouw projecten.
           </p>
 
           <div class="actions">
-            <a class="btn primary" href="#links">Ga naar links <span class="kbd">G</span></a>
-            <a class="btn" href="/public_html/" title="Pas dit aan naar je echte pad">Projecten</a>
-            <a class="btn" href="mailto:info@zurafa.org">Contact</a>
-          </div>
-
-          <div class="grid">
-            <div class="mini">
-              <b>Focus</b>
-              <p>Houd het klein: één pagina, snelle navigatie, makkelijk deployen via Git.</p>
-            </div>
-            <div class="mini">
-              <b>Deploy</b>
-              <p>Push naar GitHub en sync naar Hetzner via rsync/SFTP.</p>
-            </div>
-            <div class="mini">
-              <b>Uitbreiden</b>
-              <p>Voeg later een /docs of /status pagina toe als je wil.</p>
-            </div>
+            <a class="btn primary" href="#links">Ga naar links</a>
           </div>
         </section>
 
         <aside class="card" id="links">
           <h3>Snelkoppelingen</h3>
           <div class="links">
-            <!-- Vervang href's naar jouw echte URLs -->
-            <a class="link" href="https://github.com/geertkok" target="_blank" rel="noopener">
+            <a class="link" href="https://github.com/geertkok" target="_blank">
               <div>
                 <div><b>GitHub</b></div>
                 <div class="meta">Repos & code</div>
               </div>
-              <div class="arrow">↗</div>
+              <div>↗</div>
             </a>
-
-            <a class="link" href="https://zurafa.org" target="_blank" rel="noopener">
-              <div>
-                <div><b>Website</b></div>
-                <div class="meta">Live omgeving</div>
-              </div>
-              <div class="arrow">↗</div>
-            </a>
-
-            <a class="link" href="#" >
-              <div>
-                <div><b>Dashboard</b></div>
-                <div class="meta">Admin / panel / tools</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-
-            <a class="link" href="#">
-              <div>
-                <div><b>Docs</b></div>
-                <div class="meta">Notities & handleidingen</div>
-              </div>
-              <div class="arrow">→</div>
-            </a>
-          </div>
-
-          <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,.10); padding-top:12px">
-            <div class="meta">Tip: zet je echte links in deze blokken en commit/push.</div>
           </div>
         </aside>
       </div>
@@ -103,13 +56,9 @@
         <div>© <span id="year"></span> zurafa.org</div>
         <div>
           <a href="#" id="toggle-contrast">Toggle contrast</a>
-          <span style="opacity:.4"> • </span>
-          <a href="mailto:info@zurafa.org">info@zurafa.org</a>
         </div>
       </footer>
     </main>
   </div>
->
 </body>
 </html>
-
