@@ -1,11 +1,6 @@
-name: Deploy to Hetzner (SFTP)
+name: Deploy DEBUG to Hetzner (SFTP)
 
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - "public_html/**"
-      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 jobs:
@@ -17,30 +12,47 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y lftp openssh-client
+        run: sudo apt-get update && sudo apt-get install -y lftp openssh-client
 
       - name: Write SSH key and known_hosts
         run: |
-          set -euo pipefail
+          set -e
           mkdir -p ~/.ssh
           echo "${{ secrets.HETZNER_SSH_KEY_B64 }}" | base64 -d > ~/.ssh/hetzner_deploy
           chmod 600 ~/.ssh/hetzner_deploy
           ssh-keyscan -H "${{ secrets.HETZNER_HOST }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
-      - name: Deploy via SFTP
+      - name: DEBUG 1 — Show secret lengths
         run: |
-          set -euo pipefail
+          echo "USER length: ${#USER}"
+          echo "HOST length: ${#HOST}"
+        env:
+          USER: ${{ secrets.HETZNER_USER }}
+          HOST: ${{ secrets.HETZNER_HOST }}
 
-          lftp -e "
-            set cmd:fail-exit true;
-            set net:timeout 20;
-            set net:max-retries 2;
-            set sftp:auto-confirm yes;
-            set sftp:connect-program \"ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes\";
+      - name: DEBUG 2 — SSH test
+        run: |
+          set -e
+          ssh -vvv \
+            -i ~/.ssh/hetzner_deploy \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }} exit
 
-            mirror -R --delete --verbose public_html/ /public_html/;
-            bye
-          " sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}
+      - name: DEBUG 3 — SFTP test
+        run: |
+          set -e
+          printf "ls\nbye\n" | sftp \
+            -vvv \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -i ~/.ssh/hetzner_deploy \
+            ${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}
+
+      - name: DEBUG 4 — lftp connection test
+        run: |
+          set -e
+          lftp -d -e "set sftp:auto-confirm yes; ls; bye" \
+            sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}
