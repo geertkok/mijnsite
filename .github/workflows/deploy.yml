@@ -1,4 +1,4 @@
-name: Deploy to Hetzner (SFTP) v4.1
+name: Deploy to Hetzner (SFTP) v4.2
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
 
       - name: Show version + commit
         run: |
-          echo "DEPLOY VERSION: v4.1"
+          echo "DEPLOY VERSION: v4.2"
           echo "Commit: $GITHUB_SHA"
           echo "Ref: $GITHUB_REF"
 
@@ -49,13 +49,21 @@ jobs:
         run: |
           set -euo pipefail
 
-          lftp -d -e '
-            set cmd:fail-exit true;
-            set cmd:trace true;
-            set net:timeout 20;
-            set net:max-retries 2;
-            set sftp:auto-confirm yes;
-            set sftp:connect-program "ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes";
-            mirror -R --delete --verbose public_html/ /public_html/;
-            bye
-          ' "sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"
+          # Build lftp script file (no heredoc, no escaping hell)
+          SCRIPT=/tmp/lftp_deploy.cmd
+          : > "$SCRIPT"
+
+          printf '%s\n' \
+            'set cmd:fail-exit true' \
+            'set cmd:trace true' \
+            'set net:timeout 20' \
+            'set net:max-retries 2' \
+            'set sftp:auto-confirm yes' \
+            'set sftp:connect-program "ssh -a -x -i ~/.ssh/hetzner_deploy -o BatchMode=yes -o IdentitiesOnly=yes"' \
+            'ls' \
+            'mirror -R --delete --verbose public_html/ /public_html/' \
+            'bye' \
+            >> "$SCRIPT"
+
+          # Run with debug enabled so we can see connection/auth details if it fails
+          lftp -d -f "$SCRIPT" "sftp://${{ secrets.HETZNER_USER }}@${{ secrets.HETZNER_HOST }}"
